@@ -11,6 +11,7 @@ FROM alpine:latest
 
 WORKDIR /app
 COPY --from=build-env /src/src/github.com/blackrez/gnop-ai/gnop-ai .
+COPY public /app/public/
 RUN apk --no-cache add curl ca-certificates && \
     mkdir /data && \
     cd /data && \
@@ -19,3 +20,5 @@ RUN apk --no-cache add curl ca-certificates && \
 
 
 CMD ["./gnop-ai", "-model", "/data/tiny_yolov2/Model.onnx"]
+
+EXPOSE 8080

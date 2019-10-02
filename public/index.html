@@ -5,10 +5,17 @@
     <title>Test gnop-ai for object detection</title>
 </head>
 <body>
-<h1>Upload your image and </h1>
+<h1>Upload your image and detect objects</h1>
 
-<form action="http://localhost:8080/upload" method="post" enctype="multipart/form-data">
+<form action="/upload" method="post" enctype="multipart/form-data">
     Files: <input type="file" name="file"><br><br>
     <input type="submit" value="Submit">
 </form>
+<p>Built with love with <a href="https://github.com/owulveryck/onnx-go">onnx-go</a>, <a href="https://golang.org">golang</a> and <a href="https://gorgonia.org/">gorgonia</a></p>
+<pre>Use it with curl
+curl -vvvv -X POST https://object-detection-brhknbc27q-ew.a.run.app/upload \
+  -F "file=@./dog.jpg" \
+  -H "Content-Type: multipart/form-data"
+</pre>
+<p>Source code is available <a href="">here</a></p>
 </body>

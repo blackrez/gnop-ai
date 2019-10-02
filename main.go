@@ -101,7 +101,7 @@ func main() {
 		log.Fatal(err)
 	}
 	must(m.UnmarshalBinary(b))
-	router.StaticFS("/results", http.Dir(""))
+	router.Static("/", "./public")
 
 	router.POST("/upload", func(c *gin.Context) {
 

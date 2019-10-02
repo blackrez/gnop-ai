@@ -15,17 +15,17 @@ import (
 	"os"
 	"sort"
 
+	"github.com/blackrez/gnop-ai/internal/x/tensorimage"
+	"github.com/gin-gonic/gin"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nfnt/resize"
 	"github.com/owulveryck/onnx-go"
 	"github.com/owulveryck/onnx-go/backend/x/gorgonnx"
-	"github.com/blackrez/gnop-ai/internal/x/tensorimage"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
 	"gorgonia.org/tensor"
 	"gorgonia.org/tensor/native"
-	"github.com/gin-gonic/gin"
 )
 
 // The 416x416 image is divided into a 13x13 grid. Each of these grid cells
@@ -43,6 +43,10 @@ const (
 	envConfPrefix = "yolo"
 )
 
+type response struct {
+	Element []element `json:"elements"`
+}
+
 type configuration struct {
 	ConfidenceThreshold float64 `envconfig:"confidence_threshold" default:"0.30" required:"true"`
 	ClassProbaThreshold float64 `envconfig:"proba_threshold" default:"0.90" required:"true"`
@@ -59,9 +63,9 @@ var (
 	model   = flag.String("model", "model.onnx", "path to the model file")
 	imgF    *os.File
 	outputF *os.File
-	debug  = flag.Bool("d", false, "debug mode")
+	debug   = flag.Bool("d", false, "debug mode")
 	img     *image.Image
-	m        onnx.Model
+	m       onnx.Model
 	classes = []string{"aeroplane", "bicycle", "bird", "boat", "bottle",
 		"bus", "car", "cat", "chair", "cow",
 		"diningtable", "dog", "horse", "motorbike", "person",
@@ -97,12 +101,12 @@ func main() {
 		log.Fatal(err)
 	}
 	must(m.UnmarshalBinary(b))
-
+	router.StaticFS("/results", http.Dir(""))
 
 	router.POST("/upload", func(c *gin.Context) {
 
-	imgF, _    = ioutil.TempFile(os.TempDir(), "int-*.jpeg")
-	outputF, _ = ioutil.TempFile(os.TempDir(), "out-*.png")
+		imgF, _ = ioutil.TempFile("", "int-*.jpeg")
+		outputF, _ = ioutil.TempFile("", "out-*.png")
 
 		// Source
 		file, err := c.FormFile("file")
@@ -111,26 +115,24 @@ func main() {
 			return
 		}
 
-
 		if err := c.SaveUploadedFile(file, imgF.Name()); err != nil {
 			c.String(http.StatusBadRequest, fmt.Sprintf("upload file err: %s", err.Error()))
 			return
 		}
 
-	// Decode it into the model
+		// Decode it into the model
 
-	m.SetInput(0, getInput())
+		m.SetInput(0, getInput())
 
-	must(backend.Run())
+		must(backend.Run())
 
-	processOutput(m.GetOutputTensors())
+		result := processOutput(m.GetOutputTensors())
 
-		c.String(http.StatusOK, fmt.Sprintf("File %s uploaded successfully with fields.", *imgF))
+		c.JSON(http.StatusOK, gin.H{"result": result})
 	})
 	router.Run(":8080")
 
 }
-
 
 func getInput() tensor.Tensor {
 
@@ -170,7 +172,7 @@ func getInput() tensor.Tensor {
 	return inputT
 }
 
-func processOutput(t []tensor.Tensor, err error) {
+func processOutput(t []tensor.Tensor, err error) []element {
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -223,37 +225,38 @@ func processOutput(t []tensor.Tensor, err error) {
 		}
 	}
 	boxes = sanitize(boxes)
-	if !*debug {
-		printClassification(boxes)
-	}
+
 	drawClassification(boxes)
+	return storeClassification(boxes)
 }
 
-func printClassification(boxes []box) {
+func storeClassification(boxes []box) []element {
 	var elements []element
+	var elementsFilter []element
 	for _, box := range boxes {
-		if box.classes[0].prob > config.ConfidenceThreshold {
+		if box.classes[0].Prob > config.ConfidenceThreshold {
 			elements = append(elements, box.classes...)
 			fmt.Printf("at (%v) with confidence %2.2f%%: %v\n", box.r, box.confidence, box.classes[:3])
 		}
 	}
 	sort.Sort(sort.Reverse(byProba(elements)))
 	for _, c := range elements {
-		if c.prob > 0.4 {
-			fmt.Println(c)
+		if c.Prob > 0.4 {
+			elementsFilter = append(elementsFilter, c)
 		}
 	}
+
+	return elementsFilter
 
 }
 func drawClassification(boxes []box) {
 
-	//memory panic
 	bounds := *img
 	m := image.NewNRGBA(bounds.Bounds())
 
 	draw.Draw(m, m.Bounds(), bounds, image.ZP, draw.Src)
 	for _, b := range boxes {
-		drawRectangle(m, b.r, fmt.Sprintf("%v %2.2f%%", b.classes[0].class, b.classes[0].prob*100))
+		drawRectangle(m, b.r, fmt.Sprintf("%v %2.2f%%", b.classes[0].Class, b.classes[0].Prob*100))
 	}
 
 	if err := png.Encode(outputF, m); err != nil {
@@ -269,15 +272,15 @@ func must(err error) {
 }
 
 type element struct {
-	prob  float64
-	class string
+	Prob  float64 `json:"probability"`
+	Class string  `json:"user"`
 }
 
 type byProba []element
 
 func (b byProba) Len() int           { return len(b) }
 func (b byProba) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
-func (b byProba) Less(i, j int) bool { return b[i].prob < b[j].prob }
+func (b byProba) Less(i, j int) bool { return b[i].Prob < b[j].Prob }
 
 type box struct {
 	r          image.Rectangle
@@ -319,8 +322,8 @@ func getOrderedElements(input []float64) []element {
 	elems := make([]element, len(input))
 	for i := 0; i < len(elems); i++ {
 		elems[i] = element{
-			prob:  input[i],
-			class: classes[i],
+			Prob:  input[i],
+			Class: classes[i],
 		}
 	}
 	sort.Sort(sort.Reverse(byProba(elems)))
@@ -401,13 +404,13 @@ func sanitize(boxes []box) []box {
 			boxes = boxes[:i]
 			break
 		}
-		if boxes[i].classes[0].prob < config.ClassProbaThreshold {
+		if boxes[i].classes[0].Prob < config.ClassProbaThreshold {
 			boxes = boxes[:i]
 			break
 		}
 		for j := i + 1; j < len(boxes); {
 			iou := iou(boxes[i].r, boxes[j].r)
-			if iou > 0.5 && boxes[i].classes[0].class == boxes[j].classes[0].class {
+			if iou > 0.5 && boxes[i].classes[0].Class == boxes[j].classes[0].Class {
 				boxes = append(boxes[:j], boxes[j+1:]...)
 				continue
 			}

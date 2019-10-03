@@ -296,7 +296,7 @@ func must(err error) {
 
 type element struct {
 	Prob  float64 `json:"probability"`
-	Class string  `json:"user"`
+	Class string  `json:"object"`
 }
 
 type byProba []element

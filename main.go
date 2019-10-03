@@ -8,7 +8,7 @@ import (
 	"image/draw"
 	_ "image/jpeg"
 	_ "image/gif"
-	_ "image/webp"
+	_ "golang.org/x/image/webp"
 	_ "image/png"
 	"io/ioutil"
 	"log"

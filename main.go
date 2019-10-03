@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
+	_ "golang.org/x/image/webp"
 	"image"
 	"image/color"
 	"image/draw"
-	_ "image/jpeg"
 	_ "image/gif"
-	"golang.org/x/image/webp"
-	_ "image/png"
+	_ "image/jpeg"
+	"image/png"
 	"io/ioutil"
 	"log"
 	"math"
@@ -143,7 +143,7 @@ func main() {
 
 func getInput() tensor.Tensor {
 
-	img_tmp, err := image.Decode(imgF)
+	img_tmp, _, err := image.Decode(imgF)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func drawClassification(boxes []box) {
 		drawRectangle(m, b.r, fmt.Sprintf("%v %2.2f%%", b.classes[0].Class, b.classes[0].Prob*100))
 	}
 
-	if err := webp.Encode(outputF, m); err != nil {
+	if err := png.Encode(outputF, m); err != nil {
 		log.Fatal(err)
 	}
 

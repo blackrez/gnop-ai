@@ -6,8 +6,10 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/jpeg"
-	"image/png"
+	_ "image/jpeg"
+	_ "image/gif"
+	_ "image/webp"
+	_ "image/png"
 	"io/ioutil"
 	"log"
 	"math"
@@ -136,7 +138,7 @@ func main() {
 
 func getInput() tensor.Tensor {
 
-	img_tmp, err := jpeg.Decode(imgF)
+	img_tmp, err := Image.Decode(imgF)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -17,6 +17,7 @@ import (
 
 	"github.com/blackrez/gnop-ai/internal/x/tensorimage"
 	"github.com/gin-gonic/gin"
+	"github.com/h2non/filetype"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/nfnt/resize"
 	"github.com/owulveryck/onnx-go"
@@ -101,7 +102,7 @@ func main() {
 		log.Fatal(err)
 	}
 	must(m.UnmarshalBinary(b))
-	router.Static("/", "./public")
+	router.Static("/", "public")
 
 	router.POST("/upload", func(c *gin.Context) {
 
@@ -119,9 +120,13 @@ func main() {
 			c.String(http.StatusBadRequest, fmt.Sprintf("upload file err: %s", err.Error()))
 			return
 		}
-
+		buf, _ := ioutil.ReadFile("sample.jpg")
+		if !filetype.IsImage(buf) {
+			log.Println("Not an image")
+			c.JSON(http.StatusBadRequest, gin.H{"result": "file is not a image"})
+			return
+		}
 		// Decode it into the model
-
 		m.SetInput(0, getInput())
 
 		must(backend.Run())

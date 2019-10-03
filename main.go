@@ -122,7 +122,7 @@ func main() {
 			c.String(http.StatusBadRequest, fmt.Sprintf("upload file err: %s", err.Error()))
 			return
 		}
-		buf, _ := ioutil.ReadFile("sample.jpg")
+		buf, _ := ioutil.ReadFile(imgF)
 		if !filetype.IsImage(buf) {
 			log.Println("Not an image")
 			c.JSON(http.StatusBadRequest, gin.H{"result": "file is not a image"})

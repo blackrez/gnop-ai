@@ -109,6 +109,7 @@ func main() {
 	router.POST("/upload", func(c *gin.Context) {
 
 		imgF, _ = ioutil.TempFile("", "int-*.jpeg")
+		defer os.Remove(imgF.Name())
 		outputF, _ = ioutil.TempFile("", "out-*.png")
 
 		// Source
@@ -122,7 +123,7 @@ func main() {
 			c.String(http.StatusBadRequest, fmt.Sprintf("upload file err: %s", err.Error()))
 			return
 		}
-		buf, _ := ioutil.ReadFile(imgF)
+		buf, _ := ioutil.ReadFile(imgF.Name())
 		if !filetype.IsImage(buf) {
 			log.Println("Not an image")
 			c.JSON(http.StatusBadRequest, gin.H{"result": "file is not a image"})

@@ -1,4 +1,4 @@
-package images
+package tensorimage
 
 // happyFace is a 1x1x64x64 tensor
 type data struct {

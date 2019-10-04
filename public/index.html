@@ -7,6 +7,9 @@
 <body>
 <h1>Upload your image and detect objects</h1>
 
+<input type="file" accept="image/jpg,image/png" style="display:none" id="upload-file" />
+<button id="choose-button">Choose Image</button>
+
 <form action="/upload" method="post" enctype="multipart/form-data">
     Files: <input type="file" name="file"><br><br>
     <input type="submit" value="Submit">

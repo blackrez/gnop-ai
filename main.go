@@ -15,6 +15,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"reflect"
 	"sort"
 
 	"github.com/blackrez/gnop-ai/internal/x/tensorimage"
@@ -162,13 +163,27 @@ func getInput() tensor.Tensor {
 		scaleFactor = float32(img_tmp.Bounds().Max.X-img_tmp.Bounds().Min.X) / float32(wSize)
 		m = resize.Resize(wSize, 0, img_tmp, resize.Lanczos3)
 	}
+
 	switch m.(type) {
 	case *image.NRGBA:
 		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.NRGBA), image.ZP, draw.Src)
 	case *image.YCbCr:
 		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.YCbCr), image.ZP, draw.Src)
+	case *image.NRGBA64:
+		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.NRGBA64), image.ZP, draw.Src)
+	case *image.NYCbCrA:
+		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.NYCbCrA), image.ZP, draw.Src)
+	case *image.Alpha16:
+		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.Alpha16), image.ZP, draw.Src)
+	case *image.Alpha:
+		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.Alpha), image.ZP, draw.Src)
+	case *image.CMYK:
+		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.CMYK), image.ZP, draw.Src)
+	case *image.RGBA:
+		draw.Draw(imgRescaled, imgRescaled.Bounds(), m.(*image.RGBA), image.ZP, draw.Src)
 	default:
-		log.Fatal("unhandled type")
+		fmt.Printf(reflect.TypeOf(m).String())
+		log.Fatal("Color Model not supported")
 	}
 
 	inputT := tensor.New(tensor.WithShape(1, 3, hSize, wSize), tensor.Of(tensor.Float32))
@@ -281,7 +296,7 @@ func must(err error) {
 
 type element struct {
 	Prob  float64 `json:"probability"`
-	Class string  `json:"user"`
+	Class string  `json:"object"`
 }
 
 type byProba []element
